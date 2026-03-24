@@ -247,7 +247,7 @@ if __name__ == '__main__':
     
     # parser.add_argument('--log_path', type=str, default="./output/")
     # parser.add_argument('--log_file', type=str, default="Res3d18_NR.txt")
-    parser.add_argument('--load_name', type=str, default="/home/hanjinliang/DATA2/VL/InternVL-main/DATA/extract_features/Res3d18d2cm_BVIVFIV3_FR_v0_epoch_73_SRCC_0.841594.pth")
+    parser.add_argument('--load_name', type=str, default=None)
 
     parser.add_argument('--ckpt_path', type=str, default='ckpts')
     parser.add_argument('--multi_gpu', action='store_true', default=False)
