@@ -13,7 +13,7 @@ from torchvision import transforms
 
 class BVIDataset(data.Dataset):
     def __init__(self, data_dir, json_path, transform, is_train, is_test=False, read_num=5, start_num=5):
-        super(BVIDatasetV3, self).__init__()
+        super(BVIDataset, self).__init__()
         with open(json_path, 'r') as f:
             mos_file_content = json.loads(f.read())
             if is_train:
@@ -51,6 +51,7 @@ class BVIDataset(data.Dataset):
         # print(filename)
         rn = self.read_num
         sn = self.start_num
+        frame_num = len(os.listdir(frame_dir))
 
         frame_index = [int(sn + frame_num * k / rn) for k in range(rn)]
         Filename = []

@@ -34,7 +34,7 @@ class block_r3d_18(torch.nn.Module):
 
 class Res3d18_NR(torch.nn.Module):
     def __init__(self):
-        super(Res3d18d_NR, self).__init__()
+        super(Res3d18_NR, self).__init__()
 
         self.blockf = block_r3d_18()
         self.chns = [64, 64, 128, 256, 512]

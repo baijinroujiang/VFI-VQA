@@ -18,7 +18,7 @@ from scipy import stats
 from scipy.optimize import curve_fit
 
 import logging
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from utils import performance_fit
 from utils import L1RankLoss
 import loss as ls
@@ -61,58 +61,10 @@ def save_model(config, model, old_save_name, epoch, performance):
         torch.save(model.state_dict(), save_model_name)
     return save_model_name
 
-import matplotlib.pyplot as plt
-def plot_fit(label, score):
-    label_sort = np.sort(label)
-    idx = np.argsort(label)
-    score_sort = np.array(score)[idx]
-    z1 = np.polyfit(label_sort, score_sort, 4) 
-    yvals = np.polyval(z1, label_sort)
-    return label_sort, yvals
-def plot_and_save(label, score, epoch, config, flag = None):
-    label = label*100
-    score = score*100
-    label_a, score_a = label[0::5], score[0::5]
-    label_d, score_d = label[1::5], score[1::5]
-    label_q, score_q = label[2::5], score[2::5]
-    label_r, score_r = label[3::5], score[3::5]
-    label_s, score_s = label[4::5], score[4::5]
-    print(label_d)
-    label_sort, yvals = plot_fit(label, score)
-    plt.figure(figsize=(10, 10), dpi=50)
-    if config.database[:3] == 'BVI':
-        plt.plot(label_sort, yvals, 'r', label='polyfit values')
-        plt.scatter(label_a, score_a, c='red', s=100, label='Average')
-        plt.scatter(label_d, score_d, c='blue', s=100, label='DVF')
-        plt.scatter(label_q, score_q, c='green', s=100, label='QVI')
-        plt.scatter(label_r, score_r, c='yellow', s=100, label='Repeat')
-        plt.scatter(label_s, score_s, c='purple', s=100, label='STMFNet')
-    plt.xticks(range(0, 100, 10))
-    plt.yticks(range(0, 100, 10))
-    plt.xlabel("mos", fontdict={'size': 16})
-    plt.ylabel("score", fontdict={'size': 16})
-    plt.title(config.model_name, fontdict={'size': 20})
-    plt.legend(loc='best')
-    filename = os.path.join(config.log_path, config.log_file[:-4])
-    up_filename = os.path.join(filename, 'update')
-    epoch_filename = os.path.join(filename, 'epoch')
-    if not os.path.exists(up_filename):
-        os.makedirs(up_filename)
-    if not os.path.exists(epoch_filename):
-        os.makedirs(epoch_filename)
-    if flag != None:
-        if flag == 0:
-            plt.savefig(up_filename + f'/epoch_{epoch}V.png')
-        else:
-            plt.savefig(up_filename + f'/epoch_{epoch}.png')
-    else:
-        plt.savefig(epoch_filename + f'/epoch_{epoch}.png')
-    # print(filename + f'epoch_{epoch}.png')
-
 def main(config):
-    set_logging(config)
-    logging.info(config)
-    writer = SummaryWriter(os.path.join(config.log_path, config.log_file[:-4]))
+    # set_logging(config)
+    # logging.info(config)
+    # writer = SummaryWriter(os.path.join(config.log_path, config.log_file[:-4]))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = eval('VQA_model.{}()'.format(config.model_name))
@@ -137,7 +89,6 @@ def main(config):
     elif config.loss_type == 'L1RankLoss':
         criterion = L1RankLoss()
         print('L1Rank LOSS')
-    criterionv = ls.RealBCELoss().to(device)
 
     param_num = 0
     for param in model.parameters():
@@ -164,8 +115,7 @@ def main(config):
     test_loader = torch.utils.data.DataLoader(testset, batch_size=1,
         shuffle=False, num_workers=config.num_workers)
     
-    best_criterion = -1  # SROCC min
-    best_criterion2 = -1
+    best_criterion = -1 
     best_result = []
     old_save_name = 'None'
     best_result = [-1,-1,-1,-1]
@@ -198,8 +148,8 @@ def main(config):
                 print('Epoch: %d/%d | Step: %d/%d | Training loss: %.4f' % (
                     epoch + 1, config.epochs, i + 1, len(trainset) // config.train_batch_size, avg_loss_epoch))
 
-                logging.info(outputs.cpu().detach().numpy())
-                logging.info(labels.cpu().detach().numpy())
+                # logging.info(outputs.cpu().detach().numpy())
+                # logging.info(labels.cpu().detach().numpy())
 
 
         avg_loss = sum(batch_losses) / (len(trainset) // config.train_batch_size)
@@ -213,7 +163,7 @@ def main(config):
             model.eval()
             label_val = np.zeros([len(valset)])
             val_output = np.zeros([len(valset)])
-            for i, (video_ref, video_dis, dmos) in enumerate(val_loader):
+            for i, (video_ref, video_dis, dmos, _) in enumerate(val_loader):
 
                 video_ref = video_ref.to(device)
                 video_dis = video_dis.to(device)
@@ -222,10 +172,8 @@ def main(config):
                 label_val[i] = dmos.item()
                 val_output[i] = outputs.item()
 
-            print('Val CostTime: {:.4f}'.format(session_end_time - session_start_time))
-
-            logging.info(label_val[:5])
-            logging.info(val_output[:5])
+            # logging.info(label_val[:5])
+            # logging.info(val_output[:5])
             val_loss = criterion(torch.FloatTensor(label_val), torch.FloatTensor(val_output))
             print('Val loss:{:.4f}'.format(val_loss.item()))
 
@@ -235,25 +183,25 @@ def main(config):
                 'Epoch {} completed. The result on the val databaset: SRCC: {:.4f}, KRCC: {:.4f}, PLCC: {:.4f}, '
                 'and RMSE: {:.4f}'.format(epoch + 1, val_SRCC, val_KRCC, val_PLCC, val_RMSE*100))
 
-            if epoch == 0:
-                logging.info(label)
-            else:
-                logging.info(label[:5])
-            if epoch % 5 == 0:
-                plot_and_save(label, y_output, epoch, config)
+            # if epoch == 0:
+            #     logging.info(label)
+            # else:
+            #     logging.info(label[:5])
+            # if epoch % 5 == 0:
+            #     plot_and_save(label, y_output, epoch, config)
 
             selected_performance = [val_SRCC, val_KRCC, val_PLCC, val_RMSE * 100]
             if selected_performance[0] > best_criterion:
                 print("Update best model using best_criterion in epoch {}".format(epoch + 1))
                 best_criterion = selected_performance[0]
                 old_save_name = save_model(config, model, old_save_name, epoch, selected_performance[0])
-                plot_and_save(label, y_output, epoch, config, 'updata')
+                # plot_and_save(label, y_output, epoch, config, 'updata')
       
         with torch.no_grad():
               model.eval()
               label = np.zeros([len(testset)])
               y_output = np.zeros([len(testset)])
-              for i, (video_ref, video_dis, dmos) in enumerate(test_loader):
+              for i, (video_ref, video_dis, dmos, _) in enumerate(test_loader):
   
                   video_ref = video_ref.to(device)
                   video_dis = video_dis.to(device)
@@ -282,31 +230,31 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--database', type=str, default='interIQA')
-    parser.add_argument('--model_name', type=str, default='Resnet50')
+    parser.add_argument('--database', type=str, default='BVIVFI')
+    parser.add_argument('--model_name', type=str, default='Res3d18_NR')
 
     parser.add_argument('--conv_base_lr', type=float, default=0.0001)
-    parser.add_argument('--datainfo', type=str, default='json_files/mos_FR_008.json')
-    parser.add_argument('--videos_dir', type=str, default='/DATA_4T/hjl_data/frame_inter_out/REDS/')
+    parser.add_argument('--datainfo', type=str, default='./DATASET/json_files/vfi/train_BVI_000.json')
+    parser.add_argument('--videos_dir', type=str, default='./DATASET/BVI-VFI/frames/')
     parser.add_argument('--decay_ratio', type=float, default=0.8)
     parser.add_argument('--decay_interval', type=int, default=50)
-    parser.add_argument('--results_path', type=str, default='result')
+    parser.add_argument('--results_path', type=str, default='./result')
     parser.add_argument('--exp_version', type=int, default=1)
     parser.add_argument('--print_samples', type=int, default=100)
     parser.add_argument('--train_batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--epochs', type=int, default=400)
+    parser.add_argument('--epochs', type=int, default=100)
     
-    parser.add_argument('--log_path', type=str, default="./output/")
-    parser.add_argument('--log_file', type=str, default="Resnet50.txt")
-    parser.add_argument('--load_name', type=str, default=None)
+    # parser.add_argument('--log_path', type=str, default="./output/")
+    # parser.add_argument('--log_file', type=str, default="Res3d18_NR.txt")
+    parser.add_argument('--load_name', type=str, default="/home/hanjinliang/DATA2/VL/InternVL-main/DATA/extract_features/Res3d18d2cm_BVIVFIV3_FR_v0_epoch_73_SRCC_0.841594.pth")
 
     parser.add_argument('--ckpt_path', type=str, default='ckpts')
     parser.add_argument('--multi_gpu', action='store_true', default=False)
     parser.add_argument('--gpu_ids', type=list, default=None)
     parser.add_argument('--weight_decay', type=float, default=0)
 
-    parser.add_argument('--imgsize', type=int, default=448)
+    parser.add_argument('--imgsize', type=int, default=256)
 
     parser.add_argument('--loss_type', type=str, default='MSE')
 
